@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Juego de Memoria</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            background: #f0f0f0; 
+            margin: 0; 
+            padding: 20px;
+        }
+        h1, h2 { 
+            color: #333; 
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #bd2130;
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 100px); 
+            gap: 10px; 
+            justify-content: center; 
+            margin-top: 20px; 
+        }
+        .card { 
+            width: 100px; 
+            height: 100px; 
+            background: #333; 
+            color: #fff; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 24px; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            user-select: none; 
+        }
+        .card.flipped { 
+            background: #fff; 
+            color: #333; 
+            border: 2px solid #333; 
+        }
+        .card.matched { 
+            background: #8bc34a; 
+            visibility: hidden; 
+        }
+        .ranking-container {
+            margin-top: 40px;
+        }
+        table {
+            width: 90%;
+            max-width: 450px;
+            margin: 0 auto;
+            border-collapse: collapse; 
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #333;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Memory Game</h1>
+        
+        <div class="stats-container">
+            <div>Intentos: <span id="clicks">0</span></div>
+            <div>Tiempo: <span id="timer">0s</span></div>
+        </div>
+        
+        <button id="btn-restart" class="btn btn-danger" onclick="reiniciarJuego()">Reiniciar partida</button>
+        <button id="btn-replay" class="btn" style="display: none;" onclick="reiniciarJuego()">¡Jugar de nuevo!</button>
+
+        <div class="grid" id="game-board"></div>
+
+        <div class="ranking-container">
+            <h2>Top 5 Mejores Jugadores</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Posición</th>
+                        <th>Jugador</th>
+                        <th>Intentos</th>
+                        <th>Tiempo</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-ranking">
+                    <!-- Los datos se cargan dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const baseSymbols = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D', 'E', 'E', 'F', 'F', 'G', 'G', 'H', 'H'];
+        let shuffled = [];
+        let board = document.getElementById('game-board');
+        let flippedCards = [];
+        let attempts = 0;
+        let matches = 0;
+        
+        let timerInterval = null;
+        let seconds = 0;
+        let gameStarted = false;
+
+        function mezclarSimbolos() {
+            shuffled = [...baseSymbols];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+        }
+
+        function iniciarCronometro() {
+            if (!gameStarted) {
+                gameStarted = true;
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    document.getElementById('timer').innerText = seconds + "s";
+                }, 1000);
+            }
+        }
+
+        function detenerCronometro() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        function inicializarTablero() {
+            board.innerHTML = "";
+            attempts = 0;
+            matches = 0;
+            flippedCards = [];
+            seconds = 0;
+            gameStarted = false;
+            detenerCronometro();
+            
+            document.getElementById('clicks').innerText = attempts;
+            document.getElementById('timer').innerText = "0s";
+            
+            mezclarSimbolos();
+
+            shuffled.forEach((symbol, index) => {
+                let card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.symbol = symbol;
+                card.dataset.index = index;
+                card.innerText = '?';
+                card.addEventListener('click', flipCard);
+                board.appendChild(card);
+            });
+        }
+
+        function reiniciarJuego() {
+            document.getElementById('btn-restart').style.display = "inline-block";
+            document.getElementById('btn-replay').style.display = "none";
+            inicializarTablero();
+        }
+
+        function flipCard() {
+            if (flippedCards.length < 2 && !this.classList.contains('flipped')) {
+                iniciarCronometro();
+
+                this.classList.add('flipped');
+                this.innerText = this.dataset.symbol;
+                flippedCards.push(this);
+
+                if (flippedCards.length === 2) {
+                    attempts++;
+                    document.getElementById('clicks').innerText = attempts;
+                    setTimeout(checkMatch, 1000);
+                }
+            }
+        }
+
+        function checkMatch() {
+            let [card1, card2] = flippedCards;
+            if (card1.dataset.symbol === card2.dataset.symbol) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matches++;
+                if (matches === baseSymbols.length / 2) {
+                    detenerCronometro();
+                    document.getElementById('btn-restart').style.display = "none";
+                    document.getElementById('btn-replay').style.display = "inline-block";
+
+                    const intentosFinales = attempts;
+                    const tiempoFinal = seconds;
+
+                    setTimeout(() => {
+                        let name = prompt(`¡Ganaste en ${tiempoFinal} segundos! Ingresa tu nombre:`);
+                        if (name) {
+                            guardarRecord(name, intentosFinales, tiempoFinal);
+                        }
+                    }, 200);
+                }
+            } else {
+                card1.classList.remove('flipped');
+                card1.innerText = '?';
+                card2.classList.remove('flipped');
+                card2.innerText = '?';
+            }
+            flippedCards = [];
+        }
+
+        function guardarRecord(name, att, time) {
+            fetch('guardar.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `jugador=${encodeURIComponent(name)}&intentos=${att}&tiempo=${time}`
+            })
+            .then(res => res.text())
+            .then(data => {
+                alert("¡Récord guardado correctamente!");
+                cargarRanking();
+            });
+        }
+
+        function cargarRanking() {
+            fetch('obtener_ranking.php')
+            .then(res => res.json())
+            .then(data => {
+                let tbody = document.getElementById('tabla-ranking');
+                tbody.innerHTML = "";
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = "<tr><td colspan='4'>Aún no hay récords registrados</td></tr>";
+                    return;
+                }
+
+                data.forEach((fila, indice) => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>#${indice + 1}</strong></td>
+                        <td>${fila.jugador}</td>
+                        <td>${fila.intentos} clics</td>
+                        <td>${fila.tiempo_segundos ? fila.tiempo_segundos : 0}s</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        window.onload = function() {
+            inicializarTablero();
+            cargarRanking();
+        };
+    </script>
+</body>
+</html>
