@@ -107,11 +107,3 @@ Si cambias la configuración de MySQL, deberás ajustar los valores de conexión
 Proyecto educativo y de práctica libre para aprender desarrollo web con frontend y backend básico.
 
 ---
-
-Si quieres, puedo dejarte una versión aún más premium con:
-
-- mejor diseño visual
-- secciones tipo portfolio
-- badges más modernos
-- logo/banner principal
-- versión en inglés o con estilo para GitHub.
